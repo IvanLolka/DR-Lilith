@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Галлерея для Лилит</title>
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0b0b12; font-family: 'Segoe UI', Arial, sans-serif; }
+    #overlay {
+      position: fixed; inset: 0; z-index: 999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at 30% 40%, #2b1a10 0%, #0b0b12 60%),
+                  radial-gradient(ellipse at 70% 60%, #10283a 0%, transparent 60%);
+      color: #fff; text-align: center; padding: 24px;
+    }
+    #overlay h1 {
+      font-size: clamp(26px, 5vw, 50px); font-weight: 800; margin-bottom: 10px;
+      background: linear-gradient(90deg, #ffca7a 20%, #fff 50%, #4adefa 80%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    #overlay p { color: #ccc; max-width: 640px; line-height: 1.6; }
+    #overlay .hint {
+      margin: 18px 0; padding: 14px 20px; border: 1px solid #444; border-radius: 12px;
+      background: rgba(255,255,255,0.05); font-size: 15px; color: #eee; line-height: 1.7;
+    }
+    #overlay .hint b { color: #ffca7a; }
+    #enterBtn {
+      margin-top: 10px; padding: 16px 44px; font-size: 20px; font-weight: 700;
+      border: none; border-radius: 50px; cursor: pointer; color: #231602;
+      background: linear-gradient(90deg, #ffca7a, #ff9ecf);
+      box-shadow: 0 0 30px rgba(255,202,122,.45); transition: transform .2s;
+    }
+    #enterBtn:hover { transform: scale(1.05); }
+    #hud {
+      position: fixed; left: 12px; bottom: 12px; z-index: 10; display: none;
+      color: #ddd; font-size: 13px; background: rgba(0,0,0,.55);
+      padding: 8px 14px; border-radius: 10px; border: 1px solid #444; pointer-events: none;
+    }
+    #crosshair {
+      position: fixed; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
+      border-radius: 50%; background: rgba(255,255,255,.8); z-index: 10; display: none; pointer-events: none;
+    }
+    /* Ползунок громкости: мышь + стрелки (когда ползунок в фокусе) */
+    #volWrap {
+      position: fixed; right: 70px; bottom: 12px; z-index: 10; display: none;
+      align-items: center; gap: 10px; color: #ddd; font-size: 13px;
+      background: rgba(0,0,0,.55); padding: 8px 14px; border-radius: 10px; border: 1px solid #444;
+    }
+    #volSlider { width: 140px; accent-color: #ffca7a; cursor: pointer; }
+    #volSlider:focus { outline: 2px solid #ffca7a; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+
+<div id="overlay">
+  <h1>✨ С Днём Рождения Лилит! ✨</h1>
+  <p>Слева — зал <b>"Ностальгии"</b>
+     Справа — зал <b>"Клипы этого года"</b>
+  <div class="hint">
+    <b>WASD</b> — движение • <b>Мышь</b> — осмотр • <b>ESC</b> — курсор • <b>↑ ↓ ← →</b> — громкость (сразу, без ESC)<br>
+    Под каждым клипом кнопка «С НАЧАЛА»: наведи прицел и кликни мышью<br>
+    !!!ОСТОРОЖНО!!!<br>
+    клипы имеют разную громкость - в основном все громкие<br>
+  </div>
+  <button id="enterBtn">Войти в галерею 💜</button>
+  <p style="margin-top:14px;color:#888;font-size:13px;">Галерея собрана • by IvanLolka</p>
+</div>
+<div id="hud">WASD — движение • Мышь — осмотр • ESC — курсор • ↑ ↓ ← → — громкость • by IvanLolka</div>
+<div id="volWrap">🔊 <input id="volSlider" type="range" min="0" max="100" value="80" title="Громкость: стрелки или мышь"> <span id="volVal">80%</span></div>
+<div id="crosshair"></div>
+
+<a-scene background="color: #0e0e16" renderer="antialias: true; colorManagement: true">
+
+  <!-- ============ ВИДЕО-АССЕТЫ (51 шт, preload=none чтобы сцена грузилась быстро) ============ -->
+  <!-- Локальные файлы: crossorigin НЕ ставим, иначе dev-сервер без CORS-заголовков заблокирует текстуру -->
+  <a-assets>
+    <!-- Ностальгия: 12 раритетных клипов (landscape) -->
+    <video id="n01" src="nastoligia/20231102_FairAnimatedGaragePJSugar-2eHB7HZHixgwC3EB_source.mp4" loop playsinline preload="none"></video>
+    <video id="n02" src="nastoligia/20231205_SwissWittyBibimbapPRChase-NZR1KQWfZZuunSsw_source.mp4" loop playsinline preload="none"></video>
+    <video id="n03" src="nastoligia/20240104_SuccessfulSmilingPigCoolCat-CIhrX2uBxZ5ZVyxN_source.mp4" loop playsinline preload="none"></video>
+    <video id="n04" src="nastoligia/20240108_ImpossibleObliviousFishPanicBasket-xjOOA9qO-Y3vQKxX_source.mp4" loop playsinline preload="none"></video>
+    <video id="n05" src="nastoligia/20240112_WittyBlushingDelicataDoggo-b11_2Qrg4Y5b_bkx_source.mp4" loop playsinline preload="none"></video>
+    <video id="n06" src="nastoligia/20240117_TrappedStrangeSharkRitzMitz-LdyY2Bt5SmSzrnL1_source.mp4" loop playsinline preload="none"></video>
+    <video id="n07" src="nastoligia/20240127_FancyMotionlessGullAliens-bw7hF0ZO-L95yiTk_source.mp4" loop playsinline preload="none"></video>
+    <video id="n08" src="nastoligia/20240509_AgileRespectfulNewtMrDestructoid-84IpeaWJkyLXmxty_source.mp4" loop playsinline preload="none"></video>
+    <video id="n09" src="nastoligia/20240618_BlatantImportantBeefChocolateRain-0bmLNFmft4GFk2Fu_source.mp4" loop playsinline preload="none"></video>
+    <video id="n10" src="nastoligia/20240816_EndearingThoughtfulLatteNinjaGrumpy-o7FlXHBFvKdSRqMo_source.mp4" loop playsinline preload="none"></video>
+    <video id="n11" src="nastoligia/20240915_CaringBumblingCobblerChefFrank-5e4O4Z375V3a7uHP_source.mp4" loop playsinline preload="none"></video>
+    <video id="n12" src="nastoligia/20240921_EsteemedSmoggySageAsianGlow-TNG51F9IqoIDwEw1_source.mp4" loop playsinline preload="none"></video>
+    <!-- Хайлайты года: 39 свежих клипов по дате (L=горизонт, P=вертикаль) -->
+    <video id="c01" src="clipsYear/20250918_TriumphantSpineyCookieUnSane-eMdMBXv5ILQ7InWR_source.mp4" loop playsinline preload="none"></video>
+    <video id="c02" src="clipsYear/20250924_BlightedAmazingMeatloafBlargNaut-SrvohXAIgeKVBd4X_source.mp4" loop playsinline preload="none"></video>
+    <video id="c03" src="clipsYear/20250924_GenerousWonderfulBurritoSMOrc--NaKpQ_rRbciVtM4_source.mp4" loop playsinline preload="none"></video>
+    <video id="c04" src="clipsYear/20250924_TrustworthyFunBeaverTTours-mMZrcVhrTWPaWP0J_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c05" src="clipsYear/20250928_DeadWildBeeOneHand-6OBssSR_WpoY1sra_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c06" src="clipsYear/20250928_ResourcefulSmokyAntelopeTTours-O_CG-FJbUmG_jMlt_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c07" src="clipsYear/20250928_ResourcefulSmokyAntelopeTTours-O_CG-FJbUmG_jMlt_source.mp4" loop playsinline preload="none"></video>
+    <video id="c08" src="clipsYear/20251012_WimpyTenuousEchidnaMrDestructoid-h6v4hOF_Odkd3s_z_source.mp4" loop playsinline preload="none"></video>
+    <video id="c09" src="clipsYear/20251016_ClearGenerousRingPMSTwin-r2WmZ9QCMOHCi0MR_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c10" src="clipsYear/20251108_DepressedPluckyDovePupper-YHtHXhrGBzx5ydA-_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c11" src="clipsYear/20251108_SillyEagerHawkPastaThat-EavvzJ9s22AFTa6v_source.mp4" loop playsinline preload="none"></video>
+    <video id="c12" src="clipsYear/20251109_GloriousShortSquirrelDogFace-7MiGf9yv4eU_44a6_source.mp4" loop playsinline preload="none"></video>
+    <video id="c13" src="clipsYear/20251109_OilyBumblingWaterSmoocherZ-dl_Fmf3T_QQn07Zy_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c14" src="clipsYear/20251122_WittyCovertMacaroni4Head-Y09CvuJwSt4XEEgF_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c15" src="clipsYear/20251202_CharmingIntelligentMushroomYouWHY-rTRPgGvAAgggGR4Z_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c16" src="clipsYear/20251204_HungryBelovedBunnyCoolCat-BKjRrB-OJoybAMDX_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c17" src="clipsYear/20251213_FastBlushingAsparagusBlargNaut-riDrmZoq7BgmdhdF_source.mp4" loop playsinline preload="none"></video>
+    <video id="c18" src="clipsYear/20251217_LazyNastyAlbatrossMingLee-gauBteAO79ZciHXU_source.mp4" loop playsinline preload="none"></video>
+    <video id="c19" src="clipsYear/20251219_CovertEmpathicAirGuitarLeeroyJenkins-tQ-1ifdyRDvpuM8a_source.mp4" loop playsinline preload="none"></video>
+    <video id="c20" src="clipsYear/20251220_AbrasiveVibrantMonitorPMSTwin-m538zdFuZhMeUZ0g_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c21" src="clipsYear/20251220_ChillyReliableSwordBloodTrail-qGthuP4b_bGf3CAo_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c22" src="clipsYear/20251220_ClumsySarcasticMinkPunchTrees-vTCqTWrYq6u0EyXX_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c23" src="clipsYear/20251220_EncouragingTalentedDogeLitty-rUbpvupOEOE4herT_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c24" src="clipsYear/20251220_GentleFineDelicataTheRinger-3fEUCmuyqG_3THQG_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c25" src="clipsYear/20251220_YummyShinyAyeayeWoofer-xK1D0OonuLZb1ByQ_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c26" src="clipsYear/20251221_CharmingAthleticChimpanzeeWholeWheat-drKMVi0HwMGjhihY_source.mp4" loop playsinline preload="none"></video>
+    <video id="c27" src="clipsYear/20251222_CulturedProudPenguinTwitchRaid-GqcsvFdIeycJx1rR_source.mp4" loop playsinline preload="none"></video>
+    <video id="c28" src="clipsYear/20251222_PricklyPiercingPlumGOWSkull-FvT5m23fWk_6vYl2_source.mp4" loop playsinline preload="none"></video>
+    <video id="c29" src="clipsYear/20251228_GeniusLovelyHamsterResidentSleeper-HPdhvoB3NYXFb-rT_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c30" src="clipsYear/20251230_SarcasticStrongCoyoteFreakinStinkin-1JjzAEy_UbS8iTaj_source.mp4" loop playsinline preload="none"></video>
+    <video id="c31" src="clipsYear/20251230_WonderfulSquareDiamondDerp-o5w5EGyVHTo-7XhO_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c32" src="clipsYear/20260102_GentleRoughNoodleKappaRoss-93si4iFKvp-1A2nK_source.mp4" loop playsinline preload="none"></video>
+    <video id="c33" src="clipsYear/20260115_AntediluvianAssiduousWatermelonSaltBae-jeZjXOY26XbqHRhs_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c34" src="clipsYear/20260118_FineGeniusDonkeySaltBae-FKo__3qtnG2pBJOf_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c35" src="clipsYear/20260118_NurturingImportantLadiesPanicVis-6RNcWahFHi481Vxa_source.mp4" loop playsinline preload="none"></video>
+    <video id="c36" src="clipsYear/20260224_OddSneakyWrenCorgiDerp-SfFP_K5eBAES5plD_source.mp4" loop playsinline preload="none"></video>
+    <video id="c37" src="clipsYear/20260324_RacyBusyStingrayRiPepperonis-sVZaxw3qdVFfie6J_source.mp4" loop playsinline preload="none"></video>
+    <video id="c38" src="clipsYear/20260331_DistinctRoundPotatoMcaT-Y0D8tEV_HgIBb3Uk_portrait.mp4" loop playsinline preload="none"></video>
+    <video id="c39" src="clipsYear/20260913_GenerousCredulousOstrichCurseLit--JY5XI7O379fbKrA_portrait.mp4" loop playsinline preload="none"></video>
+  </a-assets>
+
+  <!-- ============ СВЕТ: СВЕТЛО ============ -->
+  <a-ambient-light intensity="0.6" color="#fff4e6"></a-ambient-light>
+  <a-light type="hemisphere" color="#fff2df" groundColor="#2a2a3a" intensity="0.35"></a-light>
+  <!-- Тёплая заливка запада + холодная востока -->
+  <a-light type="point" color="#ffca7a" intensity="0.8" distance="30" position="-15 3.8 -6"></a-light>
+  <a-light type="point" color="#ffca7a" intensity="0.8" distance="30" position="-15 3.8 6"></a-light>
+  <a-light type="point" color="#ffca7a" intensity="0.5" distance="26" position="-15 3.8 0"></a-light>
+  <a-light type="point" color="#7ad7ff" intensity="0.8" distance="30" position="15 3.8 -6"></a-light>
+  <a-light type="point" color="#7ad7ff" intensity="0.8" distance="30" position="15 3.8 6"></a-light>
+  <a-light type="point" color="#ffb0dd" intensity="0.5" distance="26" position="15 3.8 0"></a-light>
+  <!-- Два мягких спота-героя + подсветка арки -->
+  <a-light type="spot" color="#ffe3b3" intensity="1.0" angle="45" penumbra="0.9" distance="30" position="-15 4.3 0" target="#tWest"></a-light>
+  <a-light type="spot" color="#cfeaff" intensity="1.0" angle="45" penumbra="0.9" distance="30" position="15 4.3 0" target="#tEast"></a-light>
+  <a-light type="spot" color="#ffffff" intensity="0.9" angle="40" penumbra="0.8" distance="16" position="0 4.3 0" target="#tArch"></a-light>
+  <a-entity id="tWest" position="-29.7 2 0"></a-entity>
+  <a-entity id="tEast" position="29.7 2 0"></a-entity>
+  <a-entity id="tArch" position="0 1.2 0"></a-entity>
+
+  <!-- ============ КОРОБКА 60 x 24 м, высота 4.5 м (тёмный глянец) ============ -->
+  <a-plane position="0 0 0" rotation="-90 0 0" width="60" height="24" color="#1a1a24" roughness="0.25" metalness="0.65"></a-plane>
+  <a-plane position="0 4.5 0" rotation="90 0 0" width="60" height="24" color="#191922"></a-plane>
+  <a-box class="occluder" position="0 2.25 -12" width="60" height="4.5" depth="0.3" color="#232330"></a-box>
+  <a-box class="occluder" position="0 2.25 12"  width="60" height="4.5" depth="0.3" color="#232330"></a-box>
+  <a-box class="occluder" position="-30 2.25 0" width="0.3" height="4.5" depth="24" color="#262633"></a-box>
+  <a-box class="occluder" position="30 2.25 0"  width="0.3" height="4.5" depth="24" color="#262633"></a-box>
+
+  <!-- Неоновые плинтусы: тёплые слева, холодные справа -->
+  <a-box position="-15 0.12 -11.8" width="29.4" height="0.07" depth="0.07" color="#ffca7a" emissive="#ffca7a" emissiveIntensity="1"></a-box>
+  <a-box position="15 0.12 -11.8"  width="29.4" height="0.07" depth="0.07" color="#4adefa" emissive="#4adefa" emissiveIntensity="1"></a-box>
+  <a-box position="-15 0.12 11.8"  width="29.4" height="0.07" depth="0.07" color="#ffca7a" emissive="#ffca7a" emissiveIntensity="1"></a-box>
+  <a-box position="15 0.12 11.8"   width="29.4" height="0.07" depth="0.07" color="#ff6ec4" emissive="#ff6ec4" emissiveIntensity="1"></a-box>
+  <a-box position="-29.8 0.12 0" width="0.07" height="0.07" depth="23.6" color="#ffca7a" emissive="#ffca7a" emissiveIntensity="1"></a-box>
+  <a-box position="29.8 0.12 0"  width="0.07" height="0.07" depth="23.6" color="#4adefa" emissive="#4adefa" emissiveIntensity="1"></a-box>
+
+  <!-- Ковры -->
+  <a-plane position="-15 0.015 0" rotation="-90 0 0" width="4" height="20" color="#3a2415" roughness="0.95"></a-plane>
+  <a-plane position="15 0.015 0"  rotation="-90 0 0" width="4" height="20" color="#10293a" roughness="0.95"></a-plane>
+  <a-plane position="0 0.015 0"   rotation="-90 90 0" width="3" height="10" color="#2c2c40" roughness="0.95"></a-plane>
+
+  <!-- ============ РАЗДЕЛИТЕЛЬ С ШИРОКОЙ АРКОЙ (проём 8 м, центр свободен) ============ -->
+  <a-box class="occluder" position="0 2.25 -8" width="0.3" height="4.5" depth="8" color="#2a2a3a"></a-box>
+  <a-box class="occluder" position="0 2.25 8"  width="0.3" height="4.5" depth="8" color="#2a2a3a"></a-box>
+  <a-box position="0 3.85 0" width="0.3" height="1.3" depth="8" color="#2a2a3a"></a-box>
+  <!-- Неоновая окантовка проёма -->
+  <a-box position="-0.2 1.6 -4" width="0.07" height="3.2" depth="0.14" color="#ffca7a" emissive="#ffca7a" emissiveIntensity="1"></a-box>
+  <a-box position="-0.2 1.6 4"  width="0.07" height="3.2" depth="0.14" color="#ffca7a" emissive="#ffca7a" emissiveIntensity="1"></a-box>
+  <a-box position="0.2 1.6 -4"  width="0.07" height="3.2" depth="0.14" color="#4adefa" emissive="#4adefa" emissiveIntensity="1"></a-box>
+  <a-box position="0.2 1.6 4"   width="0.07" height="3.2" depth="0.14" color="#4adefa" emissive="#4adefa" emissiveIntensity="1"></a-box>
+  <a-box position="0 3.22 0" width="0.34" height="0.12" depth="8.2" color="#ffffff" emissive="#ffffff" emissiveIntensity="0.8"></a-box>
+
+  <!-- Вывески над аркой (font=roboto — кириллица корректно) -->
+  <a-entity id="signW" position="-0.22 3.85 0" rotation="0 -90 0">
+    <a-box width="6.4" height="1.05" depth="0.05" position="0 0 -0.04" color="#ffca7a" emissive="#ffca7a" emissiveIntensity="0.9"></a-box>
+    <a-plane width="6.3" height="0.95" position="0 0 0" color="#1a1206"></a-plane>
+    <!-- Текст «НОСТАЛЬГИЯ» дорисует скрипт canvas-текстурой (a-text без кириллицы в шрифте) -->
+  </a-entity>
+  <a-entity id="signE" position="0.22 3.85 0" rotation="0 90 0">
+    <a-box width="6.8" height="1.05" depth="0.05" position="0 0 -0.04" color="#4adefa" emissive="#4adefa" emissiveIntensity="0.9"></a-box>
+    <a-plane width="6.7" height="0.95" position="0 0 0" color="#06121a"></a-plane>
+    <!-- Текст «ХАЙЛАЙТЫ ГОДА» дорисует скрипт -->
+  </a-entity>
+
+  <!-- Стенды Ностальгии: 3 двусторонние панели вдоль зала (декор создаётся скриптом как носитель рамок).
+       Стоят с шагом 6 м, торцы не доходят до стен — обход свободный со всех сторон. -->
+  <a-entity id="standA" position="-9 0 0">
+    <a-box class="occluder" position="0 1.6 0" width="0.25" height="3.2" depth="16" color="#241c14"></a-box>
+    <a-box position="0 0.1 0" width="0.7" height="0.2" depth="16.2" color="#8a734f" metalness="0.85" roughness="0.35"></a-box>
+    <a-box position="0 3.25 0" width="0.4" height="0.1" depth="16.2" color="#8a734f" metalness="0.85" roughness="0.35"></a-box>
+  </a-entity>
+  <a-entity id="standB" position="-15 0 0">
+    <a-box class="occluder" position="0 1.6 0" width="0.25" height="3.2" depth="16" color="#241c14"></a-box>
+    <a-box position="0 0.1 0" width="0.7" height="0.2" depth="16.2" color="#8a734f" metalness="0.85" roughness="0.35"></a-box>
+    <a-box position="0 3.25 0" width="0.4" height="0.1" depth="16.2" color="#8a734f" metalness="0.85" roughness="0.35"></a-box>
+  </a-entity>
+  <!-- standC снесён: симуляция раскладки доказала, что он остаётся пустым -->
+
+  <!-- Стенды Хайлайтов: 3 двусторонние панели (холодный неон) — место под 39 клипов -->
+  <a-entity id="standD" position="9 0 0">
+    <a-box class="occluder" position="0 1.6 0" width="0.25" height="3.2" depth="16" color="#14141f"></a-box>
+    <a-box position="0 0.1 0" width="0.7" height="0.2" depth="16.2" color="#4adefa" emissive="#4adefa" emissiveIntensity="0.5" metalness="0.6" roughness="0.4"></a-box>
+    <a-box position="0 3.25 0" width="0.4" height="0.1" depth="16.2" color="#4adefa" emissive="#4adefa" emissiveIntensity="0.5" metalness="0.6" roughness="0.4"></a-box>
+  </a-entity>
+  <a-entity id="standE" position="15 0 0">
+    <a-box class="occluder" position="0 1.6 0" width="0.25" height="3.2" depth="16" color="#14141f"></a-box>
+    <a-box position="0 0.1 0" width="0.7" height="0.2" depth="16.2" color="#4adefa" emissive="#4adefa" emissiveIntensity="0.5" metalness="0.6" roughness="0.4"></a-box>
+    <a-box position="0 3.25 0" width="0.4" height="0.1" depth="16.2" color="#4adefa" emissive="#4adefa" emissiveIntensity="0.5" metalness="0.6" roughness="0.4"></a-box>
+  </a-entity>
+  <a-entity id="standF" position="21 0 0">
+    <a-box class="occluder" position="0 1.6 0" width="0.25" height="3.2" depth="16" color="#14141f"></a-box>
+    <a-box position="0 0.1 0" width="0.7" height="0.2" depth="16.2" color="#4adefa" emissive="#4adefa" emissiveIntensity="0.5" metalness="0.6" roughness="0.4"></a-box>
+    <a-box position="0 3.25 0" width="0.4" height="0.1" depth="16.2" color="#4adefa" emissive="#4adefa" emissiveIntensity="0.5" metalness="0.6" roughness="0.4"></a-box>
+  </a-entity>
+
+  <!-- Корни для построенных скриптом экспонатов -->
+  <a-entity id="nostalgia-root"></a-entity>
+  <a-entity id="clips-root"></a-entity>
+
+  <!-- ============ КАМЕРА: единый тег, движение по взгляду ============ -->
+  <a-camera position="0 1.6 0" look-controls="pointerLockEnabled: true" wasd-controls="acceleration: 30" free-roam>
+    <a-light type="point" color="#fff6e8" intensity="0.25" distance="8"></a-light>
+  </a-camera>
+
+</a-scene>
+
+<script>
+  // ================= ДАННЫЕ: все файлы из папок =================
+  // r = ширина/высота (замерено по PNG-заголовкам). Пробелы в путях закодированы как %20.
+  const N_DIR = 'nastoligia/', C_DIR = 'clipsYear/';
+  const IMG = {
+    i01: { f: '00018-477207122.webp', r: 1.5 },   // landscape
+    i02: { f: '5e2ee15c-no-bg-HD_carve.photos.webp', r: 1.0 }, // square
+    i03: { f: 'all_00075_.webp', r: 1.444 },      // landscape
+    i04: { f: 'ccvhxdfgsgs.webp', r: 0.719 },     // portrait
+    i05: { f: 'cvbcvncvb.webp', r: 1.0 },
+    i06: { f: 'dfgdfgdfgdf.webp', r: 1.0 },
+    i07: { f: 'dfgdfgdfgdfgfd.webp', r: 1.056 },
+    i08: { f: 'dfghjkl.webp', r: 1.0 },
+    i09: { f: 'dfghvjkl.webp', r: 0.61 },         // portrait
+    i10: { f: 'dfghyjukil.webp', r: 1.855 },      // wide
+    i11: { f: 'dfhfghfgh.webp', r: 0.718 },       // portrait
+    i12: { f: 'djhjjghjfg.webp', r: 0.63 },       // portrait
+    i13: { f: 'fgdhfghfgfgh.webp', r: 0.824 },    // portrait small
+    i14: { f: 'fghdfgsdff.webp', r: 0.626 },      // portrait tall
+    i15: { f: 'fhddfsd%20dcfg.webp', r: 0.719 },  // portrait
+    i16: { f: 'fhfgfhfghdfsd.webp', r: 1.203 },   // landscape
+    i17: { f: 'gdvnhgjytg.webp', r: 0.718 },      // portrait
+    i18: { f: 'gvdfsdfsd.webp', r: 0.724 },       // portrait
+    i19: { f: 'IMG_20240404_125437.webp', r: 1.0 },
+    i20: { f: 'jhmd%20sdgsdf%20g.webp', r: 0.719 }, // portrait single
+    i21: { f: 'nbcvnsafs.webp', r: 1.81 },        // wide
+    i22: { f: 'sdfrgjh,dfgh.webp', r: 1.0 },
+    i23: { f: 'vdsfsdfsdiew.webp', r: 0.626 },    // portrait tall
+    i24: { f: 'wsefsdgdsg.webp', r: 0.718 },      // portrait
+    i25: { f: 'yaLi1ith_evil.webp', r: 0.992 }    // ~square
+  };
+  // Порядок Ностальгии: арты стоят МЕЖДУ клипами (фото → клип → диптих → клип …).
+  // Диптихи собраны из портретов с близким соотношением сторон — смотрятся как единая композиция.
+  const NOSTALGIA_ORDER = [
+    { t: 'img', id: 'i01' }, { t: 'vid', id: 'n01' },
+    { t: 'pair', a: 'i04', b: 'i15' }, { t: 'vid', id: 'n02' },
+    { t: 'img', id: 'i02' }, { t: 'vid', id: 'n03' },
+    { t: 'img', id: 'i03' }, { t: 'vid', id: 'n04' },
+    { t: 'pair', a: 'i09', b: 'i23' }, { t: 'vid', id: 'n05' },
+    { t: 'img', id: 'i05' }, { t: 'vid', id: 'n06' },
+    { t: 'pair', a: 'i11', b: 'i17' }, { t: 'vid', id: 'n07' },
+    { t: 'img', id: 'i07' }, { t: 'vid', id: 'n08' },
+    { t: 'img', id: 'i06' }, { t: 'vid', id: 'n09' },
+    { t: 'pair', a: 'i12', b: 'i14' }, { t: 'vid', id: 'n10' },
+    { t: 'img', id: 'i10' }, { t: 'vid', id: 'n11' },
+    { t: 'pair', a: 'i18', b: 'i24' }, { t: 'vid', id: 'n12' },
+    // хвост без клипов — финал зала (синглы, которые не влезли в чередование)
+    { t: 'img', id: 'i08' }, { t: 'img', id: 'i16' },
+    { t: 'pair', a: 'i13', b: 'i25' },
+    { t: 'img', id: 'i19' }, { t: 'img', id: 'i21' },
+    { t: 'img', id: 'i22' }, { t: 'img', id: 'i20' }
+  ];
+  // Хайлайты года — строго по дате из имени файла (L=горизонт 16:9, P=вертикаль 9:16), 39 шт
+  const CLIPS_ORDER = [
+    { id: 'c01', o: 'L' }, { id: 'c02', o: 'L' }, { id: 'c03', o: 'L' },
+    { id: 'c04', o: 'P' }, { id: 'c05', o: 'P' }, { id: 'c06', o: 'P' },
+    { id: 'c07', o: 'L' }, { id: 'c08', o: 'L' }, { id: 'c09', o: 'P' },
+    { id: 'c10', o: 'P' }, { id: 'c11', o: 'L' }, { id: 'c12', o: 'L' },
+    { id: 'c13', o: 'P' }, { id: 'c14', o: 'P' }, { id: 'c15', o: 'P' },
+    { id: 'c16', o: 'P' }, { id: 'c17', o: 'L' }, { id: 'c18', o: 'L' },
+    { id: 'c19', o: 'L' }, { id: 'c20', o: 'P' }, { id: 'c21', o: 'P' },
+    { id: 'c22', o: 'P' }, { id: 'c23', o: 'P' }, { id: 'c24', o: 'P' },
+    { id: 'c25', o: 'P' }, { id: 'c26', o: 'L' }, { id: 'c27', o: 'L' },
+    { id: 'c28', o: 'L' }, { id: 'c29', o: 'P' }, { id: 'c30', o: 'L' },
+    { id: 'c31', o: 'P' }, { id: 'c32', o: 'L' }, { id: 'c33', o: 'P' },
+    { id: 'c34', o: 'P' }, { id: 'c35', o: 'L' }, { id: 'c36', o: 'L' },
+    { id: 'c37', o: 'L' }, { id: 'c38', o: 'P' }, { id: 'c39', o: 'P' }
+  ];
+  const N_VID_SRC = { n01:'20231102_FairAnimatedGaragePJSugar-2eHB7HZHixgwC3EB_source.mp4', n02:'20231205_SwissWittyBibimbapPRChase-NZR1KQWfZZuunSsw_source.mp4', n03:'20240104_SuccessfulSmilingPigCoolCat-CIhrX2uBxZ5ZVyxN_source.mp4', n04:'20240108_ImpossibleObliviousFishPanicBasket-xjOOA9qO-Y3vQKxX_source.mp4', n05:'20240112_WittyBlushingDelicataDoggo-b11_2Qrg4Y5b_bkx_source.mp4', n06:'20240117_TrappedStrangeSharkRitzMitz-LdyY2Bt5SmSzrnL1_source.mp4', n07:'20240127_FancyMotionlessGullAliens-bw7hF0ZO-L95yiTk_source.mp4', n08:'20240509_AgileRespectfulNewtMrDestructoid-84IpeaWJkyLXmxty_source.mp4', n09:'20240618_BlatantImportantBeefChocolateRain-0bmLNFmft4GFk2Fu_source.mp4', n10:'20240816_EndearingThoughtfulLatteNinjaGrumpy-o7FlXHBFvKdSRqMo_source.mp4', n11:'20240915_CaringBumblingCobblerChefFrank-5e4O4Z375V3a7uHP_source.mp4', n12:'20240921_EsteemedSmoggySageAsianGlow-TNG51F9IqoIDwEw1_source.mp4' };
+
+  // ================= РАСКЛАДКА =================
+  const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+  // Ряды: start (точка первого кадра), dir (направление раскладки), normal (куда смотрит кадр)
+  const N_RUNS = [
+    { p: V3(-29.7, 2.1, -10.5), d: V3(0, 0, 1),  n: V3(1, 0, 0),  len: 21 },  // западная стена
+    { p: V3(-28.5, 2.1, -11.7), d: V3(1, 0, 0),  n: V3(0, 0, 1),  len: 27 },  // север
+    { p: V3(-28.5, 2.1, 11.7),  d: V3(1, 0, 0),  n: V3(0, 0, -1), len: 27 },  // юг
+    { p: V3(-9.2, 1.95, -7.5),  d: V3(0, 0, 1),  n: V3(-1, 0, 0), len: 15 },  // стенд A / запад
+    { p: V3(-8.8, 1.95, 7.5),   d: V3(0, 0, -1), n: V3(1, 0, 0),  len: 15 },  // стенд A / восток
+    { p: V3(-15.2, 1.95, -7.5), d: V3(0, 0, 1),  n: V3(-1, 0, 0), len: 15 },  // стенд B / запад
+    { p: V3(-14.8, 1.95, 7.5),  d: V3(0, 0, -1), n: V3(1, 0, 0),  len: 15 },  // стенд B / восток
+    { p: V3(-0.35, 2.1, -10.8), d: V3(0, 0, 1),  n: V3(-1, 0, 0), len: 6 },   // разделитель С
+    { p: V3(-0.35, 2.1, 4.8),   d: V3(0, 0, 1),  n: V3(-1, 0, 0), len: 6 }    // разделитель Ю
+  ];
+  const C_RUNS = [
+    { p: V3(1.5, 2.1, -11.7),   d: V3(1, 0, 0),  n: V3(0, 0, 1),  len: 27 },  // север (ФИКС: было от x=28.5 в стену)
+    { p: V3(29.7, 2.1, -9.5),   d: V3(0, 0, 1),  n: V3(-1, 0, 0), len: 19 },  // восток
+    { p: V3(28.5, 2.1, 11.7),   d: V3(-1, 0, 0), n: V3(0, 0, -1), len: 27 },  // юг
+    { p: V3(8.8, 1.95, -7.5),   d: V3(0, 0, 1),  n: V3(-1, 0, 0), len: 15 },  // стенд D / запад
+    { p: V3(9.2, 1.95, 7.5),    d: V3(0, 0, -1), n: V3(1, 0, 0),  len: 15 },  // стенд D / восток
+    { p: V3(14.8, 1.95, -7.5),  d: V3(0, 0, 1),  n: V3(-1, 0, 0), len: 15 },  // стенд E / запад
+    { p: V3(15.2, 1.95, 7.5),   d: V3(0, 0, -1), n: V3(1, 0, 0),  len: 15 },  // стенд E / восток
+    { p: V3(20.8, 1.95, -7.5),  d: V3(0, 0, 1),  n: V3(-1, 0, 0), len: 15 },  // стенд F / запад
+    { p: V3(21.2, 1.95, 7.5),   d: V3(0, 0, -1), n: V3(1, 0, 0),  len: 15 },  // стенд F / восток
+    { p: V3(0.35, 2.1, -10.8),  d: V3(0, 0, 1),  n: V3(1, 0, 0),  len: 6 },
+    { p: V3(0.35, 2.1, 4.8),    d: V3(0, 0, 1),  n: V3(1, 0, 0),  len: 6 }
+  ];
+  const GAP = 0.9;
+
+  const videosLive = []; // {id, pos} для proximity-громкости
+  const restartBtns = []; // пластинки «С НАЧАЛА» под клипами: клик мотает видео на 0:00
+
+  function el(tag, attrs, parent) {
+    const e = document.createElement(tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    parent.appendChild(e);
+    return e;
+  }
+  function fmtDate(name) {
+    const m = name.match(/(\d{4})(\d{2})(\d{2})/);
+    return m ? m[3] + '.' + m[2] + '.' + m[1] : name.slice(0, 10);
+  }
+  // Русский текст в 3D: штатные MSDF-шрифты A-Frame без кириллицы (a-text пустой),
+  // поэтому рисуем текст на canvas системным шрифтом и клеим как текстуру. Работает всегда.
+  function cyrillicText(parent, text, width, height, color, pos) {
+    const e = document.createElement('a-entity');
+    if (pos) e.setAttribute('position', pos);
+    parent.appendChild(e);
+    e.addEventListener('loaded', () => {
+      const c = document.createElement('canvas');
+      c.width = 1024; c.height = Math.max(64, Math.round(1024 * height / width));
+      const x = c.getContext('2d');
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      let fs = 130;
+      const setF = s => { x.font = '700 ' + s + 'px "Segoe UI", Arial, sans-serif'; };
+      setF(fs);
+      while (x.measureText(text).width > c.width * 0.92 && fs > 12) { fs -= 4; setF(fs); }
+      x.fillStyle = color;
+      x.fillText(text, c.width / 2, c.height / 2 + 2);
+      const tex = new THREE.CanvasTexture(c);
+      tex.anisotropy = 4;
+      if ('colorSpace' in tex && THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(width, height),
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true })
+      );
+      e.object3D.add(mesh);
+      tex.needsUpdate = true;
+    });
+    return e;
+  }
+  // Объёмная рамка: яркая подложка + тёмный корпус + контент + подпись
+  function frame(parent, pos, normal, W, H, accent, bodyColor, caption, captionColor) {
+    // ВАЖНО: только a-entity (тега a-group в A-Frame нет — у него нет object3D и всё падает).
+    // Позицию задаём через setAttribute: прямая запись в object3D затёрлась бы при init сущности.
+    const g = el('a-entity', {}, parent);
+    g.setAttribute('position', pos.x + ' ' + pos.y + ' ' + pos.z);
+    g.setAttribute('rotation', '0 ' + (Math.atan2(normal.x, normal.z) * 180 / Math.PI) + ' 0');
+    el('a-box', { width: W + 0.16, height: H + 0.16, depth: 0.07, position: '0 0 -0.055', color: accent, emissive: accent, emissiveIntensity: 1 }, g);
+    el('a-box', { width: W, height: H, depth: 0.18, color: bodyColor }, g);
+    // Подписей снизу нет по требованию — только чистая рамка и контент.
+    return g;
+  }
+  function photoSize(r) { // высота по ориентации, ширина из пропорций
+    let h = r > 1.15 ? 1.4 : (r < 0.85 ? 1.85 : 1.6);
+    return { w: Math.min(2.6, Math.max(0.8, h * r)), h };
+  }
+  function addPhoto(root, run, cursor, src, r, accent, body, label) {
+    const s = photoSize(r), W = s.w + 0.3, H = s.h + 0.3;
+    const pos = run.p.clone().add(run.d.clone().multiplyScalar(cursor + W / 2));
+    const g = frame(root, pos, run.n, W, H, accent, body, label, accent);
+    el('a-plane', { width: s.w, height: s.h, position: '0 0 0.1', material: 'src: ' + src }, g);
+    return W;
+  }
+  function addPair(root, run, cursor, A, B, accent, body, label) {
+    const h = 1.7, w1 = h * A.r, w2 = h * B.r;
+    const W = w1 + w2 + 0.12 + 0.3, H = h + 0.3;
+    const pos = run.p.clone().add(run.d.clone().multiplyScalar(cursor + W / 2));
+    const g = frame(root, pos, run.n, W, H, accent, body, label, accent);
+    el('a-plane', { width: w1, height: h, position: (-(w2 + 0.12) / 2) + ' 0 0.1', material: 'src: ' + A.src }, g);
+    el('a-plane', { width: w2, height: h, position: ((w1 + 0.12) / 2) + ' 0 0.1', material: 'src: ' + B.src }, g);
+    el('a-box', { width: 0.06, height: h + 0.05, depth: 0.05, position: '0 0 0.1', color: accent }, g);
+    return W;
+  }
+  function addVideo(root, run, cursor, assetId, orient, accent, label) {
+    const w = orient === 'L' ? 3.02 : 1.24, h = orient === 'L' ? 1.7 : 2.2;
+    const W = w + 0.3, H = h + 0.3;
+    const pos = run.p.clone().add(run.d.clone().multiplyScalar(cursor + W / 2));
+    const g = frame(root, pos, run.n, W, H, accent, '#0a0a14', label, accent);
+    const screen = el('a-plane', { width: w, height: h, position: '0 0 0.11', material: 'src: #' + assetId + '; shader: flat' }, g);
+    // Умное видео: играет, только если экран в конусе взгляда (<45°), ближе 11 м и не за стеной
+    screen.setAttribute('smart-video', 'src: #' + assetId);
+    videosLive.push({ id: assetId, pos: pos.clone().add(run.n.clone().multiplyScalar(0.6)) });
+    // Кнопка «С НАЧАЛА» под каждым клипом: смотрит в прицел — клик мотает клип на 0:00
+    const btn = el('a-entity', { position: '0 ' + (-(H / 2 + 0.32)) + ' 0' }, g);
+    const plate = el('a-plane', { width: 1.15, height: 0.3, position: '0 0 0.02', color: '#1c1c28', class: 'restart-btn' }, btn);
+    plate.setAttribute('data-vid', assetId);
+    // Кириллица через canvas (в шрифте a-text её нет) — см. cyrillicText()
+    cyrillicText(btn, 'С НАЧАЛА', 1.0, 0.2, accent, '0 0 0.03');
+    restartBtns.push(plate);
+    return W;
+  }
+  // Раскладка по рядам с переносом
+  function layout(root, runs, items, build) {
+    let ri = 0, cursor = 0.4;
+    for (const it of items) {
+      const need = it.need + GAP;
+      if (cursor + need > runs[ri].len) { ri++; cursor = 0.4; if (ri >= runs.length) { console.warn('Переполнение зала, элемент пропущен', it); continue; } }
+      const used = build(root, runs[ri], cursor, it);
+      cursor += used + GAP;
+    }
+  }
+  function needOf(it) {
+    if (it.t === 'vid') return (it.o === 'P' ? 1.24 : 3.02) + 0.3;
+    if (it.t === 'pair') { const A = IMG[it.a], B = IMG[it.b]; return 1.7 * A.r + 1.7 * B.r + 0.12 + 0.3; }
+    const s = photoSize(IMG[it.id].r); return s.w + 0.3;
+  }
+
+  document.querySelector('a-scene').addEventListener('loaded', () => {
+    const nRoot = document.querySelector('#nostalgia-root');
+    const cRoot = document.querySelector('#clips-root');
+    // Вывески над аркой — русским canvas-текстом (a-text кириллицу не умеет)
+    cyrillicText(document.querySelector('#signW'), 'НОСТАЛЬГИЯ', 5.8, 0.72, '#ffe9c4', '0 0 0.02');
+    cyrillicText(document.querySelector('#signE'), 'КЛИПЫ ЭТОГО ГОДА', 6.2, 0.72, '#c9f5ff', '0 0 0.02');
+    // Ностальгия: тёплые рамы
+    const nItems = NOSTALGIA_ORDER.map(it => {
+      if (it.t === 'vid') return { t: 'vid', o: 'L', id: it.id, need: 3.32, label: fmtDate(N_VID_SRC[it.id]) + ' • раритет' };
+      if (it.t === 'pair') return { t: 'pair', a: it.a, b: it.b, need: needOf(it), label: 'Диптих • пара' };
+      return { t: 'img', id: it.id, need: needOf(it), label: 'Арт • ' + IMG[it.id].f.slice(0, 16) };
+    });
+    layout(nRoot, N_RUNS, nItems, (root, run, cur, it) => {
+      if (it.t === 'vid') return addVideo(root, run, cur, it.id, 'L', '#ffb35c', it.label);
+      if (it.t === 'pair') return addPair(root, run, cur,
+        { src: N_DIR + IMG[it.a].f, r: IMG[it.a].r }, { src: N_DIR + IMG[it.b].f, r: IMG[it.b].r },
+        '#ffca7a', '#2b2118', it.label);
+      const d = IMG[it.id];
+      return addPhoto(root, run, cur, N_DIR + d.f, d.r, '#ffca7a', '#2b2118', it.label);
+    });
+    // Хайлайты: холодный неон
+    const cItems = CLIPS_ORDER.map((c, i) => ({ t: 'vid', o: c.o, id: c.id, need: (c.o === 'P' ? 1.24 : 3.02) + 0.3, label: fmtDate(document.querySelector('#' + c.id).getAttribute('src')) + ' • хайлайт ' + (i + 1) }));
+    layout(cRoot, C_RUNS, cItems, (root, run, cur, it) =>
+      addVideo(root, run, cur, it.id, it.o, it.o === 'P' ? '#4adefa' : '#ff6ec4', it.label));
+  });
+
+  // ================= ХОДЬБА: внешние стены + внутренние перегородки и стенды =================
+  // Сквозь стены не пройти (круг-игрок vs AABB-стены, выталкивание), центр и арка свободны.
+  // Спавн (0, 1.6, 0) — середина комнаты, вне всех коллайдеров.
+  AFRAME.registerComponent('free-roam', {
+    init: function () {
+      this.r = 0.45;
+      this.walls = [
+        { minX: -0.15, maxX: 0.15, minZ: -12, maxZ: -4 }, // разделитель С
+        { minX: -0.15, maxX: 0.15, minZ: 4, maxZ: 12 }    // разделитель Ю
+      ];
+      for (const sx of [-15, -9, 9, 15, 21]) {         // 5 стендов-панелей (пустой standC снесён)
+        this.walls.push({ minX: sx - 0.125, maxX: sx + 0.125, minZ: -8, maxZ: 8 });
+      }
+    },
+    tick: function () {
+      const p = this.el.object3D.position, r = this.r;
+      p.x = Math.max(-29.2, Math.min(29.2, p.x));
+      p.z = Math.max(-11.2, Math.min(11.2, p.z));
+      for (const w of this.walls) {
+        const cx = Math.max(w.minX, Math.min(w.maxX, p.x));
+        const cz = Math.max(w.minZ, Math.min(w.maxZ, p.z));
+        const dx = p.x - cx, dz = p.z - cz, d2 = dx * dx + dz * dz;
+        if (d2 >= r * r) continue;
+        if (d2 > 1e-6) {
+          const d = Math.sqrt(d2);
+          p.x = cx + (dx / d) * r;
+          p.z = cz + (dz / d) * r;
+        } else { // центр внутри стены — вытолкнуть по ближайшей грани
+          const pl = p.x - w.minX, pr = w.maxX - p.x, pn = p.z - w.minZ, ps = w.maxZ - p.z;
+          const m = Math.min(pl, pr, pn, ps);
+          if (m === pl) p.x = w.minX - r;
+          else if (m === pr) p.x = w.maxX + r;
+          else if (m === pn) p.z = w.minZ - r;
+          else p.z = w.maxZ + r;
+        }
+      }
+      p.y = 1.6;
+    }
+  });
+
+  // ================= SMART-VIDEO: играет только видимый экран =================
+  // Кастомный компонент для <a-plane> видеоэкранов. Каждый тик (throttle ~200 мс):
+  //  1) дистанция камера→экран > maxDistance (22 м) → pause;
+  //  2) угол между взглядом (camera.getWorldDirection) и направлением на экран > 45° → pause;
+  //  3) луч камера→экран упёрся в стену/стенд (class="occluder") → pause (за стеной не играет);
+  //  иначе → play() + позиционная громкость: слышимый спад короткий (4 м), чтобы соседи
+  //  не перебивали (сосед в 3.5 м = тихий фон ~0.06), максимум 0.5.
+  const SMART_MAXDIST = 22, SMART_HALFFOV = 45, SMART_VOLMAX = 0.5, SMART_VOLDIST = 4;
+  let entered = false, masterVol = 0.8; // entered — после кнопки «Войти»; masterVol — ползунок
+  let occluderMeshes = [];
+  document.querySelector('a-scene').addEventListener('loaded', () => {
+    occluderMeshes = Array.from(document.querySelectorAll('.occluder')).map(e => e.object3D);
+  });
+  const occlRay = new THREE.Raycaster();
+  const occlDir = new THREE.Vector3();
+  function wallBlocked(from, to) {
+    if (!occluderMeshes.length) return false;
+    occlDir.copy(to).sub(from);
+    const dist = occlDir.length();
+    if (dist < 0.001) return false;
+    occlDir.normalize();
+    occlRay.set(from, occlDir);
+    occlRay.far = dist - 0.05; // минимальный допуск: стена вплотную за экраном всё равно ловится,
+    return occlRay.intersectObjects(occluderMeshes, true).length > 0; // старый 0.6 пропускал клипы за ближними стенами — баг
+  }
+  AFRAME.registerComponent('smart-video', {
+    schema: {
+      src: { type: 'selector' },              // <video> из <a-assets>: 'src: #n01'
+      maxDistance: { type: 'number', default: 22 },
+      halfFov: { type: 'number', default: 45 },
+      checkMs: { type: 'number', default: 200 }
+    },
+    init: function () {
+      this.last = 0;
+      this.center = new THREE.Vector3();
+      this.centerOk = false;
+      this.tmpCam = new THREE.Vector3();
+      this.tmpFwd = new THREE.Vector3();
+      this.tmpTo = new THREE.Vector3();
+    },
+    tick: function (time) {
+      if (!entered) return;
+      if (time - this.last < this.data.checkMs) return;
+      this.last = time;
+      const video = this.data.src;
+      if (!video || typeof video.play !== 'function') return;
+      const scene = this.el.sceneEl;
+      const cam = scene && scene.camera;
+      if (!cam) return;
+      if (!this.centerOk) { this.el.object3D.getWorldPosition(this.center); this.centerOk = true; }
+      cam.getWorldPosition(this.tmpCam);
+      cam.getWorldDirection(this.tmpFwd);
+      this.tmpTo.copy(this.center).sub(this.tmpCam);
+      const dist = this.tmpTo.length();
+      if (dist > this.data.maxDistance) return this.stop(video);       // далеко
+      this.tmpTo.normalize();
+      const ang = this.tmpFwd.angleTo(this.tmpTo) * 180 / Math.PI;
+      if (ang > this.data.halfFov) return this.stop(video);            // за спиной / сбоку
+      if (wallBlocked(this.tmpCam, this.center)) return this.stop(video); // за стеной
+      const vd = Math.min(dist, SMART_VOLDIST);
+      video.volume = Math.max(0, Math.min(1, masterVol * SMART_VOLMAX * (1 - vd / SMART_VOLDIST)));
+      if (video.paused) video.play().catch((err) => {
+        // AbortError = play() прерван паузой между тиками — просто попробуем позже, НЕ мьютим.
+        // Мьютим только при запрете автоплея браузером, иначе клип онемеет навсегда.
+        if (err && err.name === 'NotAllowedError') { video.muted = true; video.play().catch(() => {}); }
+      });
+    },
+    stop: function (video) { if (!video.paused) video.pause(); }
+  });
+
+  // ================= Клик «С НАЧАЛА»: прицел + клик мотает клип на 0:00 =================
+  document.querySelector('a-scene').addEventListener('loaded', () => {
+    const scene = document.querySelector('a-scene');
+    const center = new THREE.Vector2(0, 0);
+    const clickRay = new THREE.Raycaster();
+    scene.canvas.addEventListener('click', () => {
+      if (!entered || !scene.camera || !restartBtns.length) return;
+      clickRay.setFromCamera(center, scene.camera);
+      const roots = restartBtns.map(b => b.object3D);
+      const hits = clickRay.intersectObjects(roots, true);
+      if (!hits.length) return;
+      // какая кнопка? ищем корень, чьим потомком является попавший меш
+      for (const b of restartBtns) {
+        let found = false;
+        b.object3D.traverse(o => { if (o === hits[0].object) found = true; });
+        if (found) {
+          const vid = document.querySelector('#' + b.getAttribute('data-vid'));
+          if (vid) { try { vid.currentTime = 0; } catch (e) {} vid.play().catch(() => {}); }
+          break;
+        }
+      }
+    });
+  });
+
+  // ================= Громкость: ползунок (мышь) + стрелки (всегда, без ESC) =================
+  // Стрелки работают сразу, фокус и ESC не нужны: глобальный перехват в capture-фазе
+  // срабатывает раньше bubble-слушателя wasd-controls на том же window — событие гасится,
+  // до камеры стрелки не доходят. Движение — только WASD.
+  const volSlider = document.getElementById('volSlider');
+  const volVal = document.getElementById('volVal');
+  function setMaster(pct) {
+    pct = Math.max(0, Math.min(100, Math.round(pct)));
+    masterVol = pct / 100;
+    volSlider.value = String(pct);
+    volVal.textContent = pct + '%';
+  }
+  volSlider.addEventListener('input', () => setMaster(Number(volSlider.value)));
+  const VOL_STEP = 5;
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    if (!entered) return;
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') setMaster(Number(volSlider.value) + VOL_STEP);
+    else setMaster(Number(volSlider.value) - VOL_STEP);
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+
+  const overlay = document.getElementById('overlay');
+  document.getElementById('enterBtn').addEventListener('click', () => {
+    overlay.style.display = 'none';
+    document.getElementById('hud').style.display = 'block';
+    document.getElementById('volWrap').style.display = 'flex';
+    document.getElementById('crosshair').style.display = 'block';
+    entered = true; // дальше рулит smart-video: играет только видимый экран
+    const scene = document.querySelector('a-scene');
+    if (scene.canvas && scene.canvas.requestPointerLock) scene.canvas.requestPointerLock();
+  });
+</script>
+</body>
+</html>

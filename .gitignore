@@ -1,0 +1,54 @@
+# ===== GitHub: не грузить мусор (медиапапки проекта НЕ тронуты) =====
+
+# --- Windows / macOS / Linux ---
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.AppleDouble
+.LSOverride
+.Trashes
+._*
+
+# --- Редакторы и IDE ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# --- Временные и бэкап-файлы ---
+*.tmp
+*.temp
+*.bak
+*.old
+* - Copy.*
+*-копия.*
+~$*
+
+# --- Python (serve.py) ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# --- Node (если подключишь сборку/сервер) ---
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# --- Логи ---
+*.log
+
+# ===== Файлы/папки, не относящиеся к проекту (лежат рядом, в репозиторий не надо) =====
+backup/
+gemini-code-*.py
+Новая папка/
+*.zip
+*.rar
+*.7z
